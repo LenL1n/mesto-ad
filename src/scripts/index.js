@@ -211,6 +211,9 @@ const handleRemoveCardSubmit = (evt) => {
     })
     .catch((err) => {
       console.log(err);
+    })
+    .finally(() => {
+      hideLoading(removeCardSubmitButton, originalButtonText);
     });
 };
 
