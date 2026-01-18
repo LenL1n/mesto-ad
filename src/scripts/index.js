@@ -222,73 +222,75 @@ removeCardForm.addEventListener("submit", handleRemoveCardSubmit);
 const getCardsStatistics = () => {
   return getCardList()
     .then((cards) => {
-      const totalUsers = new Set();
-      const userLikes = {};
-      const userCards = {};
+      const allUsers = [];
+      
       let totalLikes = 0;
+      
+      const userLikesCount = {};
+      const userNames = {};
       
       cards.forEach((card) => {
         totalLikes += card.likes.length;
         
-        card.likes.forEach((like) => {
-          totalUsers.add(like._id);
-          
-          if (userLikes[like._id]) {
-            userLikes[like._id] += 1;
-          } else {
-            userLikes[like._id] = 1;
-          }
-          
-          if (!userCards[like._id]) {
-            userCards[like._id] = [];
-          }
-          userCards[like._id].push(card.name);
-        });
-      });
-      
-      let topLikerId = null;
-      let maxLikes = 0;
-      
-      const userIds = Object.keys(userLikes);
-      for (let i = 0; i < userIds.length; i++) {
-        const userId = userIds[i];
-        const likesCount = userLikes[userId];
-        if (likesCount > maxLikes) {
-          maxLikes = likesCount;
-          topLikerId = userId;
-        }
-      }
-      
-      let championName = "Неизвестный";
-      let championCards = [];
-      
-      if (topLikerId) {
-        let foundUser = null;
-        
-        for (let i = 0; i < cards.length; i++) {
-          const card = cards[i];
-          for (let j = 0; j < card.likes.length; j++) {
-            const like = card.likes[j];
-            if (like._id === topLikerId) {
-              foundUser = like;
+        card.likes.forEach((user) => {
+          let userExists = false;
+          for (let i = 0; i < allUsers.length; i++) {
+            if (allUsers[i] === user._id) {
+              userExists = true;
               break;
             }
           }
-          if (foundUser) break;
+          
+          if (!userExists) {
+            allUsers.push(user._id); 
+          }
+          
+          userNames[user._id] = user.name;
+          
+          if (userLikesCount[user._id]) {
+            userLikesCount[user._id] += 1;
+          } else {
+            userLikesCount[user._id] = 1;
+          }
+        });
+      });
+      
+      let maxLikes = 0;
+      let championId = null;
+      
+      Object.keys(userLikesCount).forEach((userId) => {
+        const likesCount = userLikesCount[userId];
+        if (likesCount > maxLikes) {
+          maxLikes = likesCount;
+          championId = userId;
         }
-        
-        if (foundUser) {
-          championName = foundUser.name;
-          championCards = userCards[topLikerId] || [];
-        }
+      });
+      
+      let championName = "Неизвестный";
+      if (championId && userNames[championId]) {
+        championName = userNames[championId];
+      }
+      
+      const popularCards = [];
+      
+      const cardsCopy = [];
+      for (let i = 0; i < cards.length; i++) {
+        cardsCopy.push(cards[i]);
+      }
+      cardsCopy.sort((cardA, cardB) => {
+        return cardB.likes.length - cardA.likes.length;
+      });
+      
+      for (let i = 0; i < 3 && i < cardsCopy.length; i++) {
+        popularCards.push(cardsCopy[i].name);
       }
       
       return {
-        totalUsers: totalUsers.size,
-        totalLikes,
+        totalUsers: allUsers.length,
+        totalLikes: totalLikes,
         maxLikesPerUser: maxLikes,
-        championName,
-        championCards,
+        championName: championName,
+        popularCards: popularCards
       };
     });
 };
@@ -324,13 +326,12 @@ const showCardsStatistics = () => {
         infoContent.appendChild(definitionClone);
       });
       
-      const topCards = stats.championCards.slice(0, 3);
-      topCards.forEach((cardName) => {
-        const userPreviewClone = userPreviewTemplate.content.cloneNode(true);
-        const listItem = userPreviewClone.querySelector(".popup__list-item");
-        listItem.textContent = cardName;
-        
-        infoList.appendChild(userPreviewClone);
+      stats.popularCards.forEach((cardName) => {
+      const userPreviewClone = userPreviewTemplate.content.cloneNode(true);
+      const listItem = userPreviewClone.querySelector(".popup__list-item");
+      listItem.textContent = cardName;
+  
+      infoList.appendChild(userPreviewClone);
       });
     })
     .catch((err) => {
